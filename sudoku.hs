@@ -28,24 +28,31 @@ blockIndexes x y = [dx*9 + dy |  dx <- [row_start..(row_start+2)], dy <- [col_st
     where row_start = (x `div` 3) * 3
           col_start = (y `div` 3) * 3
 
--- zwraca liste elementów elementów małego kwadratu w którym znajduje się
+-- zwraca liste elementów małego kwadratu w którym znajduje się
 -- krotka o rzedzie r i columnie c
 subSquare :: Int -> Int -> Puzzle -> [Int]
-subSquare r c puzzle = map (puz !!) (blockIndexes r c)
-    where puz = concat puzzle
+subSquare r c = flip map (blockIndexes r c).((!!).concat)
 
 -- funkcja sprawdzająca czy element zawiera się w liście
 isIn :: Int -> [Int] -> Bool
-isIn _ [] = False
-isIn el (x:xs) = x==el || isIn el xs
+isIn = flip foldr False.(((||).).(==))
 
-findNextEmpty :: Int -> Puzzle -> (Int, Int)
-findNextEmpty _ [] = (-1, -1)
-findNextEmpty i (row:rest) = if emptyCol /= -1 then (i, emptyCol) else findNextEmpty (i+1) rest
-    where emptyInRow _ [] = -1
-          emptyInRow i (x:xs) = if x==0 then i else emptyInRow (i+1) xs
+--funkcja wykorzystana do szukania indeksów wierszy w Sudoku i indeksów elementów w wierszu
+indexOf :: Eq a => a -> [a] -> Int
+indexOf _ [] = -10
+indexOf el (x:xs)
+        | x == el = 0
+        | otherwise = 1 + indexOf el xs
 
-          emptyCol = emptyInRow 0 row
+-- funkcja zwraca pare (row, column) - współrzędne nieuzupełnionej krotki sudoku
+-- lub (-1, -1), jeżeli sudoku jest kompletnie uzupełnione
+findNextEmpty :: Puzzle -> (Int, Int)
+findNextEmpty puzzle
+    | null r = (-1,-1)
+    | otherwise = (indexOf r puzzle, indexOf 0 r)
+    where rowWithEmpty [] = []
+          rowWithEmpty (x:xs) = if isIn 0 x then x else rowWithEmpty xs
+          r = rowWithEmpty puzzle
 
 -- sprawdzamy czy zgadnięty element x nie znajduje się już w wierszu r lub kolumnie c
 -- lub subkwadracie 3x3
@@ -61,12 +68,12 @@ add r c puzzle x = take r puzzle ++ [take c middle ++ [x] ++ drop (c+1) middle] 
 guess :: Int -> Int -> Int -> Puzzle -> (Puzzle, Bool)
 guess _ _ 10 puzzle = (puzzle , False)
 guess r c g puzzle
-        | isValid g r c puzzle = if snd nextTry then nextTry else guess r c (g+1) puzzle
+        | isValid g r c puzzle && snd nextTry = nextTry
         | otherwise = guess r c (g+1) puzzle
             where nextTry = solveSudoku $ add r c puzzle g
 
---funkcja przyjmuje sudoku do rozwiązania (Puzzle) oraz zwraca 
--- 1 - (rozwiazanie sudoku, True) w przypadku istnienia rozwiązania
+-- funkcja przyjmuje sudoku do rozwiązania (Puzzle) oraz zwraca 
+-- 1 - (rozwiazane sudoku, True) w przypadku istnienia rozwiązania
 -- 2 - (wejściowe sudoku, False)  w przypadku nieistnienia rozwiązania 
 solveSudoku :: Puzzle -> (Puzzle, Bool)
 solveSudoku puzzle
@@ -74,7 +81,7 @@ solveSudoku puzzle
   | snd nextTry = nextTry
   | otherwise = (puzzle, False)
   where
-      (row, col) = findNextEmpty 0 puzzle
+      (row, col) = findNextEmpty puzzle
       nextTry = guess row col 1 puzzle
 
 
@@ -112,4 +119,3 @@ main = do
         let solvedPuzzle = solveSudoku puzzle
         if snd solvedPuzzle then showPuzzle (fst solvedPuzzle)
         else putStrLn "Rozwiazanie nie istnieje"
-        
