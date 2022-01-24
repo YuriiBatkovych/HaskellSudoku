@@ -33,10 +33,6 @@ blockIndexes x y = [dx*9 + dy |  dx <- [row_start..(row_start+2)], dy <- [col_st
 subSquare :: Int -> Int -> Puzzle -> [Int]
 subSquare r c = flip map (blockIndexes r c).((!!).concat)
 
--- funkcja sprawdzająca czy element zawiera się w liście
-isIn :: Int -> [Int] -> Bool
-isIn = flip foldr False.(((||).).(==))
-
 --funkcja wykorzystana do szukania indeksów wierszy w Sudoku i indeksów elementów w wierszu
 indexOf :: Eq a => a -> [a] -> Int
 indexOf _ [] = -10
@@ -51,13 +47,13 @@ findNextEmpty puzzle
     | null r = (-1,-1)
     | otherwise = (indexOf r puzzle, indexOf 0 r)
     where rowWithEmpty [] = []
-          rowWithEmpty (x:xs) = if isIn 0 x then x else rowWithEmpty xs
+          rowWithEmpty (x:xs) = if 0 `elem` x then x else rowWithEmpty xs
           r = rowWithEmpty puzzle
 
 -- sprawdzamy czy zgadnięty element x nie znajduje się już w wierszu r lub kolumnie c
 -- lub subkwadracie 3x3
 isValid :: Int -> Int -> Int -> Puzzle -> Bool
-isValid x r c puzzle = not $ isIn x set
+isValid x r c puzzle = x `notElem` set
     where set = row r puzzle ++ column c puzzle ++ subSquare r c puzzle
 
 -- wstawiamy element x w krotkę o wierszu r i kolumnie c
@@ -65,6 +61,7 @@ add :: Int -> Int -> Puzzle -> Int -> Puzzle
 add r c puzzle x = take r puzzle ++ [take c middle ++ [x] ++ drop (c+1) middle] ++ drop (r+1) puzzle
         where middle = puzzle !! r
 
+--funkcja dopasowująca prawidłową liczbę na puste miejsce
 guess :: Int -> Int -> Int -> Puzzle -> (Puzzle, Bool)
 guess _ _ 10 puzzle = (puzzle , False)
 guess r c g puzzle
@@ -119,3 +116,4 @@ main = do
         let solvedPuzzle = solveSudoku puzzle
         if snd solvedPuzzle then showPuzzle (fst solvedPuzzle)
         else putStrLn "Rozwiazanie nie istnieje"
+        
